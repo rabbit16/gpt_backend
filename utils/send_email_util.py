@@ -22,7 +22,7 @@ def send_email(title, content, user_recv):
     username_send = SMTP_USER
     password = SMTP_PASSWORD
     username_recv = [user_recv]  # 收件人，多个收件人用逗号隔开
-    content += "   \n如果您不认识这个邮件，可以忽略，肯定是有人随便输入了一个邮箱。"
+    content += "   \n如果您不认识这个邮件，可以忽略，肯定是有人随便输入了一个邮箱。来源: https://www.rabbitj.top/ 智能对话官网。"
     mail = MIMEText(content)  # 这里输入邮箱内容
     mail['Subject'] = title  # 这里是标题
     mail['From'] = username_send  # 发件人

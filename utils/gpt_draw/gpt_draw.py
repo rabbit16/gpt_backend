@@ -20,7 +20,8 @@ from settings.env import get
 from settings.macro import FILE_STORE_LINUX_PWD, USR_LOG
 
 # 站内图像中转地址，可用 LLM_PROXY_BASE 覆盖。
-LLM_PROXY_BASE = (get("LLM_PROXY_BASE", "http://127.0.0.1:8888/v1") or "").rstrip("/")
+# 注意：这里是 TeamRouter（claude_proxy，默认 127.0.0.1:4000），不是本服务自己的 8888。
+LLM_PROXY_BASE = (get("LLM_PROXY_BASE", "https://www.rabbitj.top/v1") or "").rstrip("/")
 
 
 def draw_pic_func(prompt, mode, api_key=None, size="1024x1024"):

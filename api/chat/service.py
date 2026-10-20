@@ -27,10 +27,13 @@ from settings.billing import (
     parse_pending_mode,
 )
 from settings.dependencies import REDIS_SMI_CODE, REDIS_USER_ASK_TOKEN
-from settings.macro import USR_LOG
+from settings.macro import SUPPORT_PHONE, USR_LOG
 from utils.public_exception import UnicornException
 from utils.res_code import Code, ERROR_MAP
 from utils.send_email_util import send_email
+
+# 客服联系方式由 SUPPORT_PHONE 注入；未配置时这些提示里不带号码。
+_SUPPORT = SUPPORT_PHONE or "管理员"
 
 
 class ChatService:
@@ -83,7 +86,7 @@ class ChatService:
         user_item = common.db.query(User).filter(User.user_id == request_body.userId)
         if user_item.first().is_delete:
             USR_LOG.info(f"""封禁用户尝试提问: {request_body.userId}""")
-            return self._limit_stream("系统怀疑你恶意使用爬虫，已经永久封禁。解封请联系管理员。")
+            return self._limit_stream(f"系统怀疑你恶意使用爬虫，已经永久封禁。解封请联系{_SUPPORT}。")
         if user_item.first().token < 0:
             USR_LOG.info(f"""封禁用户尝试提问: {request_body.userId}""")
             return self._limit_stream(
@@ -115,12 +118,12 @@ class ChatService:
                     common.db.delete(user_item.first())
                     common.db.commit()
                     return self._limit_stream(
-                        "系统怀疑恶意注册，已删除您的账户，请换一个正常使用的信息注册，如有疑问请联系管理员")
+                        f"系统怀疑恶意注册，已删除您的账户，请换一个正常使用的信息注册，如有疑问请联系{_SUPPORT}")
             return response
         if user_item.first().token <= 0.5 and "gpt-4" in request_body.mode:
-            return self._limit_stream("选中模型需要余额大于0.5才可使用哦，请**充值**后再使用哦～有问题联系管理员")
+            return self._limit_stream(f"选中模型需要余额大于0.5才可使用哦，请**充值**后再使用哦～有问题联系{_SUPPORT}")
         if user_item.first().token <= 0 and "免费" not in request_body.mode:
-            return self._limit_stream("请**充值**后再使用哦～有问题联系管理员")
+            return self._limit_stream(f"请**充值**后再使用哦～有问题联系{_SUPPORT}")
 
         USR_LOG.info(
             f"{request_body.userId} 模型{request_body.mode} 所属IP{request.client.host} 用户询问GPT内容为： {request_body.prompt}， 请求体{request_body}")

@@ -26,8 +26,18 @@ pytz==2023.3.post1
 requests==2.31.0
 openai==1.4.0
 
+# token 计数（settings/billing.py；缺失时退化为 len/4 估算）
+tiktoken==0.14.0
+
 # 日志
 loguru==0.7.2
 
-# 文档导出
+# 文档导出（另需系统安装 pandoc 二进制）
 pypandoc==1.12
+
+# 独立脚本依赖（utils/schedule_task/schedule_card.py、utils/gpt_token_deal/token_acquire.py、
+# utils/pay_util/pay_item.py），主服务启动不需要
+schedule==1.2.1
+Flask==3.0.0
+lxml==5.1.0
+pyppeteer==1.0.2

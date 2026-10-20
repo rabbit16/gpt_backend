@@ -13,7 +13,18 @@ OPENAI_PROXY = get("OPENAI_PROXY", "")
 
 openai.organization = OPENAI_ORG_ID
 openai.api_key = OPENAI_API_KEY
-client = OpenAI(api_key=OPENAI_API_KEY, organization=OPENAI_ORG_ID or None)
+
+_client = None
+
+
+def _openai_client():
+    """延迟创建 OpenAI 客户端：缺少密钥时在调用处报错，而不是 import 阶段就崩。"""
+    global _client
+    if _client is None:
+        if not OPENAI_API_KEY:
+            raise RuntimeError("未配置 OPENAI_API_KEY，请在 .env 中设置")
+        _client = OpenAI(api_key=OPENAI_API_KEY, organization=OPENAI_ORG_ID or None)
+    return _client
 
 
 class GptAsk:
@@ -21,7 +32,7 @@ class GptAsk:
         self.url = url
 
     def ask_gpt_single(self, prompt, model="gpt-3.5-turbo-16k"):
-        response = client.chat.completions.create(
+        response = _openai_client().chat.completions.create(
             model=model,
             messages=[
                 {"role": "system", "content": "需要你换一个语气和风格对我给你的话进行改写，保证内容的意思不变，改写的字数接近。仅输出改写后的内容即可，并附带基本的文本段落格式。"},
