@@ -1,0 +1,81 @@
+# ---------- 环境变量与密钥 ----------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+privite_key.txt
+zhifubao_key.txt
+secrets/
+
+# ---------- 敏感数据与备份 ----------
+data_back/
+开发文档/
+# 上游账号密钥清单，仅保留在本地
+utils/gpt_token_deal/token.json
+utils/gpt_token_deal/token_back.json
+docs/*.gz
+docs/*.sql
+*.sql
+*.sql.gz
+*.xlsx
+账本.xlsx
+
+# ---------- 代理与第三方订阅 ----------
+sockboom.yaml
+*.yaml.bak
+
+# ---------- 日志与运行时产物 ----------
+log/
+*.log
+nohup.out
+*.pid
+*.sock
+
+# ---------- Python ----------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+venv/
+.venv/
+env/
+ENV/
+pip-wheel-metadata/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# ---------- IDE / 系统 ----------
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ---------- 本地测试与临时文件 ----------
+test/
+tests/
+tmp/
+*.tmp
+*.bak
+
+# ---------- 第三方本地二进制包 ----------
+utils/potrace-*
+*.tar.gz
+*.zip
+
+# ---------- 编辑器与 shell 残留 ----------
+# 误重定向产生的杂项文件（如 `python -c ... > =`）
+=
+*.orig
+*.rej
