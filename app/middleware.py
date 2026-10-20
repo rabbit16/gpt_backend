@@ -21,6 +21,9 @@ PUBLIC_PATHS = {
     "/favicon.ico",
     "/apiAI/user/mode_list",
     "/apiAI/user/verify_rabbit",
+    # 微信支付 v3 回调与下单自检，微信服务器不携带登录 token
+    "/apiAI/user/wxpay/notify",
+    "/apiAI/user/wxpay/status",
     "/apiAI/user/feedback",
     "/apiAI/user/feedback/list",
     "/apiAI/user/announcement/list",

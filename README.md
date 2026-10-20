@@ -127,7 +127,8 @@ python main_app.py          # 0.0.0.0:8888
 | `/verify` `/register` `/logout` | 登录、注册、登出 |
 | `/password/send_code` `/password/reset` | 验证码与找回密码 |
 | `/gpt/ask` | 对话主接口（需 `token` 请求头） |
-| `/verify_pay` `/verify_rabbit` | 支付回调 |
+| `/verify_pay` `/verify_rabbit` | 支付回调（支付宝 / 蓝兔聚合） |
+| `/wxpay/pay` `/wxpay/notify` `/wxpay/query` `/wxpay/status` | 微信支付 v3 直连 |
 | `/file` `/file/image` | 文件与图片下载 |
 | `/feedback` `/announcement` `/software` | 反馈、公告、软件 |
 | `/admin/*` | 后台管理（需管理员） |
@@ -147,6 +148,72 @@ python main_app.py          # 0.0.0.0:8888
 | `SMTP_*` | 邮件验证码 |
 | `SMS_APP_KEY` / `SMS_APP_SECRET` | 短信验证码 |
 | `ALI_*` / `WXPAY_*` / `LTZF_*` | 支付配置 |
+
+## 微信支付 v3 接入
+
+项目同时保留两条支付链路，互不影响：
+
+- `/pay_rabbit`、`/verify_rabbit`：旧的蓝兔聚合通道，继续可用。
+- `/wxpay/*`：微信官方 APIv3 直连，当前支持 **Native 扫码** 与 **H5**。
+
+### 1. 准备材料
+
+从商户平台和证书包中取得：
+
+| 材料 | 来源 |
+| --- | --- |
+| 商户号 `WXPAY_MCHID` | 证书文件名前缀，如 `1655833359_20261021_cert.zip` |
+| 证书序列号 `WXPAY_CERT_SERIAL_NO` | `openssl x509 -in apiclient_cert.pem -noout -serial` |
+| APIv3 密钥 `WXPAY_APIV3_KEY` | 商户平台「账户中心 → API 安全」自行设置的 32 位串 |
+| 商户私钥 | 证书包里的 `apiclient_key.pem` |
+| 微信支付公钥 | 商户平台「API 安全 → 微信支付公钥」，或证书包同目录的 `pub_key.pem` |
+| 公钥 ID `WXPAY_PUBLIC_KEY_ID` | 商户平台公钥页面显示，形如 `PUB_KEY_ID_...` |
+
+> `apiv2密钥` 与 `APIv3 密钥` 是两个不同的值。APIv2 只用于旧版接口和退款回调，
+> 本项目 v3 链路**不使用**它，填错会导致回调解密失败。
+
+### 2. 配置
+
+```dotenv
+WXPAY_MCHID=1655833359
+WXPAY_CERT_SERIAL_NO=<40位十六进制>
+WXPAY_APIV3_KEY=<32位>
+WXPAY_APPID=<公众号或网站应用 appid>
+WXPAY_NOTIFY_URL=https://your.domain/apiAI/user/wxpay/notify
+WXPAY_PRIVATE_KEY_FILE=./weixin_pay/apiclient_key.pem
+WXPAY_PUBLIC_KEY_FILE=./weixin_pay/pub_key.pem
+WXPAY_PUBLIC_KEY_ID=PUB_KEY_ID_xxxxxxxx
+WXPAY_PARTNER_MODE=false
+```
+
+证书与密钥目录（`weixin_pay/`、`*.pem`）已在 `.gitignore` 中，不会进入仓库。
+
+### 3. 接口
+
+```bash
+# 配置自检，部署后先跑这个
+curl http://127.0.0.1:9000/apiAI/user/wxpay/status
+
+# 下单：pay_type 可选 native / h5
+curl -X POST http://127.0.0.1:9000/apiAI/user/wxpay/pay \
+  -H 'Content-Type: application/json' -H 'token: <登录 token>' \
+  -d '{"userId":1,"money":50,"function_code":"chatGpt","pay_type":"native"}'
+
+# 查单
+curl http://127.0.0.1:9000/apiAI/user/wxpay/query/<outTradeNo>
+```
+
+回调地址必须能被微信公网访问，本地调试请用内网穿透工具映射到同一路径。
+
+### 4. 联调建议
+
+先用独立端口试跑，确认无误后再替换旧链路：
+
+```bash
+APP_PORT=9000 python main_app.py
+```
+
+`main_app.py` 已支持 `APP_PORT`，默认仍是 8888。
 | `FILE_STORE_ADDR` / `FILE_STORE_LINUX_PWD` | 下载地址前缀与本地存储目录 |
 | `SUPER_USER_ID_LIST` / `SUPER_ADMIN_PHONES` | 管理员白名单 |
 | `DOCS_REFERERS` | 允许免登录访问 `/docs` 的来源 |

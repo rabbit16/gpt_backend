@@ -8,6 +8,8 @@
 privite_key.txt
 zhifubao_key.txt
 secrets/
+# 微信支付商户证书、API 密钥与公钥，仅保留在本地
+weixin_pay/
 
 # ---------- 敏感数据与备份 ----------
 data_back/

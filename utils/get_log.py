@@ -39,10 +39,15 @@ def email_filter(record):
     return "email" in record["extra"]["name"]
 
 
+def pay_filter(record):
+    return "pay" in record["extra"]["name"]
+
+
 map_dict = {
     "user": user_filter,
     "system": system_filter,
-    "email": email_filter
+    "email": email_filter,
+    "pay": pay_filter
 }
 
 

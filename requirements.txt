@@ -35,6 +35,9 @@ loguru==0.7.2
 # 文档导出（另需系统安装 pandoc 二进制）
 pypandoc==1.12
 
+# 微信支付 v3 官方 SDK（Native/H5 下单、回调验签）
+wechatpayv3==2.0.4
+
 # 独立脚本依赖（utils/schedule_task/schedule_card.py、utils/gpt_token_deal/token_acquire.py、
 # utils/pay_util/pay_item.py），主服务启动不需要
 schedule==1.2.1

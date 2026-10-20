@@ -9,6 +9,7 @@ from api.task.router import router as task_router
 from api.files.router import router as files_router
 from api.payment.router import router as payment_router
 from api.users.router import router as users_router
+from api.wxpay.router import router as wxpay_router
 from settings.macro import NGINX_ROUTER
 
 api_router = APIRouter(
@@ -18,6 +19,8 @@ api_router = APIRouter(
 api_router.include_router(users_router)
 api_router.include_router(chat_router)
 api_router.include_router(payment_router)
+# 微信支付 v3 原生路由，与旧的聚合支付路由并存
+api_router.include_router(wxpay_router)
 api_router.include_router(files_router)
 api_router.include_router(feedback_router)
 api_router.include_router(task_router)
