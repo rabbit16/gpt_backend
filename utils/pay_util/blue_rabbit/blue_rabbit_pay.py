@@ -66,7 +66,7 @@ def create_pay(code_num, pay_url, money_num):
         "mch_id": LTZF_MCH_ID,  # 必填
         "out_trade_no": code_num,  # 必填
         "total_fee": money_num,  # 必填
-        "body": "gpt_pay",  # 必填
+        "body": "兔子ai",  # 必填：收银台展示的商品名称，全站统一
         "timestamp": str(int(t)),  # 必填
         "notify_url": RETURN_URL_BACK,  # 必填
         "quit_url": LTZF_QUIT_URL,

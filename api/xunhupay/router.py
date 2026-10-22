@@ -39,16 +39,19 @@ _PAY_TYPE_MAP = {"auto": "auto", "h5": "h5", "qrcode": "qrcode", "native": "qrco
 # 微信/支付宝 H5 的标题限制：不能带表情与 %，最多 42 个汉字。
 _TITLE_MAX = 42
 
+# 收银台展示的商品名称，全站统一，不接受前端传入。
+ORDER_TITLE = "兔子ai"
+
 
 def _is_mobile(request: Request):
     user_agent = request.headers.get("user-agent", "").lower()
     return bool(re.search(r"mobile|android|iphone|ipad|ipod|harmonyos", user_agent))
 
 
-def _clean_title(raw, function_code):
-    title = (raw or "").strip() or f"AI 服务-{function_code}"
-    title = title.replace("%", "").replace("&", "")
-    return title[:_TITLE_MAX] or "AI 服务"
+def _clean_title(raw=None, function_code=None):
+    """商品名称固定为 ORDER_TITLE，忽略前端传入的 description。"""
+    title = ORDER_TITLE.replace("%", "").replace("&", "").strip()
+    return title[:_TITLE_MAX] or ORDER_TITLE
 
 
 @router.get("/status", response_model=XuHuPayStatusResponse)
@@ -100,7 +103,7 @@ def create_pay(request: Request, body: XuHuPayCreate, common: CommonQueryParams 
         data = xunhupay_pay.create_pay(
             out_trade_no,
             money,
-            _clean_title(body.description, body.function_code),
+            _clean_title(),
             mobile=pay_type == "h5",
             attach=body.function_code,
         )
