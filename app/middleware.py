@@ -24,6 +24,11 @@ PUBLIC_PATHS = {
     # 微信支付 v3 回调与下单自检，微信服务器不携带登录 token
     "/apiAI/user/wxpay/notify",
     "/apiAI/user/wxpay/status",
+    # 虎皮椒回调与自检，虎皮椒服务器不携带登录 token
+    "/apiAI/user/xunhupay/notify",
+    "/apiAI/user/xunhupay/status",
+    # 全站支付通道开关，登录前也要读取，不含任何敏感信息
+    "/apiAI/user/pay/channel",
     "/apiAI/user/feedback",
     "/apiAI/user/feedback/list",
     "/apiAI/user/announcement/list",

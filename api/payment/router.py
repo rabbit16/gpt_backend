@@ -15,6 +15,10 @@ from api.users.response_schemas import (
     UserBillListResponse,
 )
 from api.users.schemas import BillFormat, BillQueryFormat, UserPayApi, VerifyPayAgainFormat
+from api.payment import channel as pay_channel
+from api.payment.schemas_channel import PayChannelUpdate
+from api.admin.auth import require_admin
+from app.http import json_response
 from settings.dependencies import CommonQueryParams, REDIS_BILL_TOOL
 from settings.macro import ALI_PAY_GATEWAY, PAY_URL_MAP_DICT, USR_LOG
 from utils.add_answer_num import add_num_by_money
@@ -166,6 +170,37 @@ def get_user_bill_list(request: Request, request_body: BillQueryFormat,
             )
         ).count()
     )
+
+
+@router.get("/pay/channel")
+def get_pay_channel():
+    """读取全站当前生效的支付通道，前端启动时调用。"""
+    return json_response({
+        "code": str(Code.OK),
+        "codeMsg": ERROR_MAP[Code.OK],
+        **pay_channel.public_config(),
+    })
+
+
+@router.post("/admin/payment/channel")
+def set_pay_channel(request_body: PayChannelUpdate, common: CommonQueryParams = Depends()):
+    """管理员切换全站支付通道。"""
+    _, error = require_admin(common)
+    if error:
+        return error
+    try:
+        current = pay_channel.set_channel(request_body.channel)
+    except ValueError as exc:
+        return json_response({
+            "code": str(Code.ACCESS_DENY),
+            "codeMsg": str(exc),
+        })
+    USR_LOG.info(f"管理员切换支付通道为 {current}")
+    return json_response({
+        "code": str(Code.OK),
+        "codeMsg": ERROR_MAP[Code.OK],
+        **pay_channel.public_config(),
+    })
 
 
 @router.post("/pay_rabbit", response_model=PayApiResponse)
