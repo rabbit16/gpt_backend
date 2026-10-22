@@ -106,7 +106,6 @@ class ChatService:
                 "左下方还可以更换gpt的模型。"
                 "如果你想让gpt回答的更好，在问问题之前，请尝试给gpt一个身份已让他更好的回答你，比如： 你现在是一个xxx的专家或者更好的提示给他。"
                 "gpt-4模型是不会说自己是gpt4的，所以请不要怀疑，如果你选择gpt4，那一定是gpt4在回答您，您也可以在网上找相关问题验证他的真实性。"
-                "售后群以及gpt讨论群：757565609"
             )
             verification_code = ''.join(str(random.randint(0, 9)) for _ in range(4))
             redis_code_store = f"{user_item.first().user_id}:{verification_code}"

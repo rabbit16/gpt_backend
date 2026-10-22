@@ -17,7 +17,7 @@ from api.wxpay.schemas import (
     WxPayStatusResponse,
 )
 from settings.dependencies import CommonQueryParams
-from settings.macro import USR_LOG
+from settings.macro import PRODUCT_NAME, USR_LOG
 from utils.add_answer_num import add_num_by_money
 from utils.pay_util import pay_param, wxpay_order, wxpay_v3
 from utils.res_code import ERROR_MAP, Code
@@ -70,7 +70,8 @@ def create_pay(request: Request, body: WxPayCreate, common: CommonQueryParams = 
         )
 
     out_trade_no = wxpay_order.build_order_no(body.function_code, body.userId)
-    description = body.description or "AI 服务"
+    # 商品描述全站统一，不接受前端传入，避免暴露内部标识或联系方式。
+    description = PRODUCT_NAME
     total_fen = int(round(body.money * 100))
     if total_fen <= 0:
         return JSONResponse(

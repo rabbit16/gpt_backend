@@ -20,7 +20,7 @@ from api.xunhupay.schemas import (
     XuHuPayStatusResponse,
 )
 from settings.dependencies import REDIS_BILL_TOOL, CommonQueryParams
-from settings.macro import USR_LOG
+from settings.macro import PRODUCT_NAME, USR_LOG
 from utils.pay_util import pay_settle
 from utils.pay_util.xunhupay import settle as xunhupay_settle
 from utils.pay_util.xunhupay import xunhupay_pay
@@ -40,7 +40,7 @@ _PAY_TYPE_MAP = {"auto": "auto", "h5": "h5", "qrcode": "qrcode", "native": "qrco
 _TITLE_MAX = 42
 
 # 收银台展示的商品名称，全站统一，不接受前端传入。
-ORDER_TITLE = "兔子ai"
+ORDER_TITLE = PRODUCT_NAME
 
 
 def _is_mobile(request: Request):

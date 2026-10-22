@@ -32,6 +32,9 @@ CONTEXT_TIME_OUT = 10
 # 客服/管理员联系方式，从环境变量读取，避免把个人手机号写进仓库。
 SUPPORT_PHONE = get("SUPPORT_PHONE", "")
 
+# 收银台展示的商品名称，全站统一。
+PRODUCT_NAME = get("PRODUCT_NAME", "妮兔AI")
+
 # PLUS_USER_MONEY = 30
 PLUS_USER_MONEY = 50  # gpt4普通会员
 # REGULAR_USER_MONEY = 10
