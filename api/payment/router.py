@@ -151,13 +151,35 @@ def get_user_bill_list(request: Request, request_body: BillQueryFormat,
         )
     ).offset(request_body.page_num * (request_body.page - 1)). \
         limit(request_body.page_num).all()
+    # 支付记录直接显示开票状态，省得前端每页再查一次发票列表。
+    # 发票表可能还没建（老库首次启动），失败时按未开票处理，不影响账单接口。
+    invoice_map = {}
+    bill_ids = [obj.bill_id for obj in user_bill_obj_list]
+    if bill_ids:
+        try:
+            from api.invoice.service import ensure_invoice_table
+            from api.users.models import Invoice
+            ensure_invoice_table()
+            rows = common.db.query(Invoice.bill_id, Invoice.status, Invoice.id).filter(
+                Invoice.user_id == request_body.userId,
+                Invoice.bill_id.in_(bill_ids),
+                Invoice.status.in_(("pending", "issuing", "issued")),
+            ).all()
+            for bill_id, status, invoice_id in rows:
+                invoice_map[bill_id] = (status, invoice_id)
+        except Exception:
+            invoice_map = {}
+
     user_bill_list = []
     for obj in user_bill_obj_list:
+        status, invoice_id = invoice_map.get(obj.bill_id, ("none", None))
         user_bill_list.append({
             "bill_id": obj.bill_id,
             "generate_time": obj.generate_time,
             "pay": obj.money,
-            "function_name": d[obj.function_id]
+            "function_name": d[obj.function_id],
+            "invoice_status": status,
+            "invoice_id": invoice_id,
         })
     return UserBillListResponse(
         code=Code.OK,

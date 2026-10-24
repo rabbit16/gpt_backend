@@ -7,6 +7,8 @@ from apscheduler.triggers.cron import CronTrigger
 from api.router import api_router
 from api.announcement.service import ensure_announcement_table
 from api.software.service import ensure_software_tables
+from api.invoice.service import ensure_invoice_table
+from api.open_source.service import ensure_open_source_tables
 from api.feedback.service import ensure_feedback_table
 from api.task.service import ensure_task_table
 from api.users.api_keys import ensure_api_key_table
@@ -37,6 +39,8 @@ def create_app() -> FastAPI:
         ensure_task_table()
         ensure_announcement_table()
         ensure_software_tables()
+        ensure_invoice_table()
+        ensure_open_source_tables()
         ensure_api_key_table()
         ensure_username_columns()
         scheduler.add_job(

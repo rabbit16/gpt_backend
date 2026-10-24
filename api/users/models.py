@@ -272,3 +272,79 @@ class UserTask(Base):
     __table_args__ = (
         Index("ix_user_task_owner_status", "user_id", "is_delete", "status"),
     )
+
+
+class Invoice(Base):
+    """发票申请，按充值订单开，一单最多一张有效发票。
+
+    状态：pending（待审核）→ issuing（开票中）→ issued（已开票）；pending/issuing 可驳回为 rejected。
+    rejected 不计入「已占用」，用户可以对该订单重新申请。
+    """
+    __tablename__ = "tb_invoice"
+    id = Column(Integer, primary_key=True, autoincrement=True, index=True)
+    user_id = Column(Integer, ForeignKey("tb_user.user_id", ondelete="CASCADE"), index=True, nullable=False)
+    bill_id = Column(String(50), index=True, nullable=False, default="")
+    amount = Column(Float, nullable=False, default=0)  # 以后端订单金额为准，不信前端
+    title_type = Column(String(16), nullable=False, default="company")  # company | personal
+    title = Column(String(200), nullable=False, default="")
+    tax_no = Column(String(50), nullable=False, default="")
+    email = Column(String(200), nullable=False, default="")
+    remark = Column(String(500), nullable=False, default="")
+    status = Column(String(16), nullable=False, default="pending", index=True)
+    invoice_no = Column(String(100), nullable=False, default="")
+    reject_reason = Column(String(500), nullable=False, default="")
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    __table_args__ = (
+        Index("ix_invoice_bill_status", "user_id", "bill_id", "status"),
+        Index("ix_invoice_status_created", "status", "created_at"),
+    )
+
+
+class OpenSourceProject(Base):
+    """软件商城里的项目（用户提交或官方预置）。
+
+    一个项目可以有多个版本、每个版本再按平台挂安装包，见 OpenSourceRelease。
+    用户提交后 status=pending，站长审核通过才出现在公开列表。
+    """
+    __tablename__ = "tb_open_source_project"
+    id = Column(Integer, primary_key=True, autoincrement=True, index=True)
+    name = Column(String(200), nullable=False, default="")
+    summary = Column(String(500), nullable=False, default="")
+    description = Column(TEXT, nullable=False, default="")
+    repo_url = Column(String(500), nullable=False, default="")
+    author_name = Column(String(100), nullable=False, default="")
+    cover_url = Column(String(500), nullable=False, default="")
+    official = Column(Boolean, default=False)
+    status = Column(String(16), nullable=False, default="pending", index=True)  # pending / approved / rejected
+    reviewer_note = Column(String(500), nullable=False, default="")
+    user_id = Column(Integer, ForeignKey("tb_user.user_id", ondelete="SET NULL"), index=True, nullable=True)
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    __table_args__ = (
+        Index("ix_open_source_status_updated", "status", "updated_at"),
+        Index("ix_open_source_user", "user_id", "status"),
+    )
+
+
+class OpenSourceRelease(Base):
+    """项目某个版本在某个平台的安装包。
+
+    同一次提交里的多个平台共用 version / changelog，所以这里既存版本号也存包地址。
+    """
+    __tablename__ = "tb_open_source_release"
+    id = Column(Integer, primary_key=True, autoincrement=True, index=True)
+    project_id = Column(Integer, ForeignKey("tb_open_source_project.id", ondelete="CASCADE"),
+                        index=True, nullable=False)
+    version = Column(String(50), nullable=False, default="")
+    platform = Column(String(16), nullable=False, default="")  # windows / macos / linux
+    file_url = Column(String(1000), nullable=False, default="")
+    file_size = Column(String(50), nullable=False, default="")
+    changelog = Column(TEXT, nullable=False, default="")
+    status = Column(String(16), nullable=False, default="pending")  # pending / approved / rejected
+    reviewer_note = Column(String(500), nullable=False, default="")
+    created_at = Column(DateTime, default=func.now())
+    __table_args__ = (
+        Index("ix_open_source_release_project", "project_id", "status"),
+    )
+

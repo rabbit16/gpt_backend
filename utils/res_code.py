@@ -20,6 +20,7 @@ class Code:
     FEEDBACK_INVALID = "3007"
     FEEDBACK_TOO_FAST = "3008"
     TASK_INVALID = "3009"
+    PROJECT_INVALID = "3010"
 
 
 ERROR_MAP = {
@@ -35,4 +36,5 @@ ERROR_MAP = {
     Code.FEEDBACK_INVALID: "留言内容不符合要求",
     Code.FEEDBACK_TOO_FAST: "提交太频繁，请稍后再试",
     Code.TASK_INVALID: "任务内容不符合要求",
+    Code.PROJECT_INVALID: "项目信息不符合要求",
 }

@@ -35,6 +35,8 @@ PUBLIC_PATHS = {
     "/apiAI/user/announcement/latest",
     "/apiAI/user/software/category/list",
     "/apiAI/user/software/list",
+    # 软件商城公开列表，游客也要能浏览
+    "/apiAI/user/open-source/projects",
 }
 
 SKIP_AUTH_PATHS = {
@@ -81,8 +83,10 @@ def register_auth_middleware(app: FastAPI):
                     "code": str(Code.USER_EXPIRE),
                     "codeMsg": ERROR_MAP[Code.USER_EXPIRE],
                 })
-            if "referer" not in header_dict and request_url.path not in ["/apiAI/user/verify_rabbit", "/apiAI/user/file"]:
-                return json_response({"code": "0", "codeMsg": "成功"})
+            # 原来是「没 token 且没 referer 就回 {"code":0} 成功」的兜底，
+            # 那是给早年某个无 token 轮询接口留的。现在前端任何写操作都带 token，
+            # 这种空壳响应会让前端把「未登录」误判成提交成功（用户以为申请成功，
+            # 站长后台却一条都收不到）。统一按未登录处理，前端会弹登录框。
             SYSTEM_LOG.info(f"接口{request_url.path}, 方法: {request.method}耗时: {time.time() - start_time}")
             return json_response({
                 "code": str(Code.USER_EXPIRE),
