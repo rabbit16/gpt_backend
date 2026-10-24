@@ -26,6 +26,9 @@ OCCUPIED_STATUS = ("pending", "issuing", "issued")
 VALID_STATUS = ("pending", "issuing", "issued", "rejected")
 REVIEW_STATUS = ("issued", "rejected")
 
+# 一次合并开票最多几笔，与前端 src/pages/invoice/index.tsx 的 MERGE_MAX 保持一致
+MAX_MERGE_BILLS = 20
+
 MIN_TITLE = 2
 MAX_TITLE = 200
 MAX_TAX_NO = 50
@@ -83,17 +86,39 @@ def _item(row: Invoice):
     }
 
 
+def split_bill_ids(value):
+    """把 bill_id / order_no 里的订单号拆成列表。
+
+    合并开票时前端会用英文逗号把多个订单号拼成一个字符串，
+    所以这里两种输入都接受：数组原样用，字符串按逗号切分。
+    """
+    if not value:
+        return []
+    items = value if isinstance(value, (list, tuple)) else str(value).split(",")
+    result = []
+    for item in items:
+        bill_id = str(item or "").strip()
+        if bill_id and bill_id not in result:
+            result.append(bill_id)
+    return result
+
+
 def _taken_status(db, user_id, bill_id, exclude_id=None):
-    """返回占用该订单的发票状态，没有则 None。"""
+    """返回占用该订单的发票状态，没有则 None。
+
+    bill_id 在合并开票后可能是 "B1,B2,B3"，因此不能再用等值匹配，
+    统一按「逗号分隔的订单号列表是否包含该单」判断。
+    """
     query = db.query(Invoice).filter(
         Invoice.user_id == user_id,
-        Invoice.bill_id == bill_id,
         Invoice.status.in_(OCCUPIED_STATUS),
     )
     if exclude_id is not None:
         query = query.filter(Invoice.id != exclude_id)
-    row = query.first()
-    return row.status if row else None
+    for row in query.all():
+        if bill_id in split_bill_ids(row.bill_id):
+            return row.status
+    return None
 
 
 class InvoiceService:
@@ -105,27 +130,40 @@ class InvoiceService:
         if not user:
             return _fail(Code.USER_EXPIRE, ERROR_MAP[Code.USER_EXPIRE])
 
-        bill_id = (request_body.bill_id or request_body.order_no or "").strip()
-        if not bill_id:
+        # 订单号来源：bill_ids 数组（合并开票）> bill_id 逗号串 > order_no。
+        # 前端合并时会同时传 bill_id（逗号串）和 bill_ids（数组），以数组为准。
+        bill_ids = split_bill_ids(request_body.bill_ids) or split_bill_ids(
+            request_body.bill_id or request_body.order_no
+        )
+        if not bill_ids:
             return _fail(CODE_INVOICE_INVALID, "请从支付记录里选择订单开票")
+        if len(bill_ids) > MAX_MERGE_BILLS:
+            return _fail(
+                CODE_INVOICE_INVALID, "一次最多合并 %s 笔订单开票" % MAX_MERGE_BILLS
+            )
 
-        bill = common.db.query(Bill).filter(
-            Bill.bill_id == bill_id,
+        bills = common.db.query(Bill).filter(
+            Bill.bill_id.in_(bill_ids),
             Bill.is_delete == False,
-        ).first()
-        if not bill or bill.generate_by != user.user_id:
-            return _fail(CODE_BILL_NOT_FOUND, "找不到这笔订单，请刷新支付记录")
-
-        # tb_bill 只在支付回调验签通过后写入，金额未达入账条件时还会回滚，
-        # 因此能查到记录即代表已支付充值订单；金额为 0 或负数视为异常。
-        if not bill.money or float(bill.money) <= 0:
-            return _fail(CODE_BILL_NOT_PAID, "只有已支付的充值订单可以开票")
-
-        taken = _taken_status(common.db, user.user_id, bill_id)
-        if taken:
-            if taken == "issued":
-                return _fail(CODE_BILL_ALREADY_INVOICED, "该订单已开过发票，不能重复申请")
-            return _fail(CODE_BILL_ALREADY_INVOICED, "该订单的发票正在处理中，请勿重复提交")
+        ).all()
+        bill_map = {row.bill_id: row for row in bills}
+        for bill_id in bill_ids:
+            bill = bill_map.get(bill_id)
+            if not bill or bill.generate_by != user.user_id:
+                return _fail(CODE_BILL_NOT_FOUND, "找不到订单 %s，请刷新支付记录" % bill_id)
+            # tb_bill 只在支付回调验签通过后写入，金额未达入账条件时还会回滚，
+            # 因此能查到记录即代表已支付充值订单；金额为 0 或负数视为异常。
+            if not bill.money or float(bill.money) <= 0:
+                return _fail(CODE_BILL_NOT_PAID, "只有已支付的充值订单可以开票")
+            taken = _taken_status(common.db, user.user_id, bill_id)
+            if taken:
+                if taken == "issued":
+                    return _fail(
+                        CODE_BILL_ALREADY_INVOICED, "订单 %s 已开过发票，不能重复申请" % bill_id
+                    )
+                return _fail(
+                    CODE_BILL_ALREADY_INVOICED, "订单 %s 的发票正在处理中，请勿重复提交" % bill_id
+                )
 
         title_type = (request_body.title_type or "company").strip().lower()
         if title_type not in ("company", "personal"):
@@ -148,10 +186,13 @@ class InvoiceService:
         if len(remark) > MAX_REMARK:
             return _fail(CODE_INVOICE_INVALID, "备注请控制在 %s 字以内" % MAX_REMARK)
 
+        # 金额以订单为准：合并开票是各订单金额之和，不采用前端传来的 amount。
+        amount = sum(float(bill_map[bill_id].money) for bill_id in bill_ids)
         row = Invoice(
             user_id=user.user_id,
-            bill_id=bill_id,
-            amount=float(bill.money),  # 金额以订单为准
+            # 多笔用英文逗号拼进同一个字段（一单一行，与前端按 order 记录展示兼容）
+            bill_id=",".join(bill_ids),
+            amount=round(amount, 2),
             title_type=title_type,
             title=title,
             tax_no=tax_no,
@@ -195,12 +236,16 @@ class InvoiceService:
             Invoice.user_id == user.user_id,
             Invoice.status.in_(OCCUPIED_STATUS),
         ).all():
-            value = bill_amount.get(bill_id, 0.0)
-            occupied.add(bill_id)
-            if status == "issued":
-                issued_amount += value
-            else:
-                pending_amount += value
+            # 合并开票的 bill_id 是逗号拼接串，要逐笔算金额，不能整串查表
+            for single_id in split_bill_ids(bill_id):
+                if single_id in occupied:
+                    continue
+                value = bill_amount.get(single_id, 0.0)
+                occupied.add(single_id)
+                if status == "issued":
+                    issued_amount += value
+                else:
+                    pending_amount += value
 
         invoiceable = sum(
             amount for bill_id, amount in bill_amount.items() if bill_id not in occupied
@@ -259,15 +304,18 @@ class InvoiceService:
             invoice_no = (request_body.invoice_no or "").strip()
             if not invoice_no:
                 return _fail(CODE_INVOICE_INVALID, "通过审核必须填写发票号")
-            # 并发兜底：同一订单不能出现第二张已开票
-            other = common.db.query(Invoice).filter(
-                Invoice.user_id == row.user_id,
-                Invoice.bill_id == row.bill_id,
-                Invoice.id != row.id,
-                Invoice.status == "issued",
-            ).first()
-            if other:
-                return _fail(CODE_BILL_ALREADY_INVOICED, "该订单已有其他已开出的发票")
+            # 并发兜底：同一订单不能出现第二张已开票。
+            # 合并票的 bill_id 是逗号串，任一单号重复都算冲突。
+            my_ids = set(split_bill_ids(row.bill_id))
+            if my_ids:
+                others = common.db.query(Invoice.bill_id).filter(
+                    Invoice.user_id == row.user_id,
+                    Invoice.id != row.id,
+                    Invoice.status == "issued",
+                ).all()
+                for (other_bill_id,) in others:
+                    if my_ids & set(split_bill_ids(other_bill_id)):
+                        return _fail(CODE_BILL_ALREADY_INVOICED, "该订单已有其他已开出的发票")
             row.status = "issued"
             row.invoice_no = invoice_no[:100]
             row.reject_reason = ""

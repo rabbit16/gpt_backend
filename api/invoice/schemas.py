@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -6,7 +6,10 @@ from pydantic import BaseModel, Field
 class InvoiceCreate(BaseModel):
     """提交开票申请。金额一律以订单为准，前端传来的 amount / order_no 只做兼容忽略。"""
 
-    bill_id: Optional[str] = Field(None, description="要开票的充值订单号，必填")
+    bill_ids: Optional[List[str]] = Field(
+        None, description="合并开票：要合并的订单号数组，优先于 bill_id"
+    )
+    bill_id: Optional[str] = Field(None, description="要开票的充值订单号，必填；合并时是逗号拼接串")
     amount: Optional[float] = Field(None, description="旧字段，忽略，以后端订单金额为准")
     order_no: Optional[str] = Field(None, description="旧字段，等价于 bill_id")
     title_type: str = Field("company", description="company 单位 / personal 个人")

@@ -157,16 +157,20 @@ def get_user_bill_list(request: Request, request_body: BillQueryFormat,
     bill_ids = [obj.bill_id for obj in user_bill_obj_list]
     if bill_ids:
         try:
-            from api.invoice.service import ensure_invoice_table
+            from api.invoice.service import ensure_invoice_table, split_bill_ids
             from api.users.models import Invoice
             ensure_invoice_table()
+            # 合并开票把多个订单号逗号拼进一条记录，没法用 in_ 精确匹配，
+            # 这里取该用户全部有效发票再按单号拆开映射。
             rows = common.db.query(Invoice.bill_id, Invoice.status, Invoice.id).filter(
                 Invoice.user_id == request_body.userId,
-                Invoice.bill_id.in_(bill_ids),
                 Invoice.status.in_(("pending", "issuing", "issued")),
             ).all()
-            for bill_id, status, invoice_id in rows:
-                invoice_map[bill_id] = (status, invoice_id)
+            current = set(bill_ids)
+            for raw_bill_id, status, invoice_id in rows:
+                for single_id in split_bill_ids(raw_bill_id):
+                    if single_id in current:
+                        invoice_map[single_id] = (status, invoice_id)
         except Exception:
             invoice_map = {}
 

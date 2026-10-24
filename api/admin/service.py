@@ -8,6 +8,7 @@ from api.admin.auth import is_admin_user, require_admin
 from api.feedback.service import ensure_feedback_table
 from settings.dependencies import REDIS_TOOL
 from api.admin.schemas import (
+    AdminFeedbackDelete,
     AdminFeedbackQuery,
     AdminFeedbackUpdate,
     AdminOrderQuery,
@@ -333,6 +334,31 @@ class AdminService:
             "code": str(Code.OK),
             "codeMsg": code_msg,
             "item": self._feedback_item(row),
+        })
+
+    def delete_feedback(self, request_body: AdminFeedbackDelete, common):
+        """彻底删除留言（物理删除）。
+
+        与 update_feedback 里的 is_delete 不同：那是「隐藏」，数据还在；
+        站长明确要求这里能从后台真的清掉，所以直接 delete 行。
+        留言墙是公开可见的，删错了没法恢复，前端已加二次确认。
+        """
+        admin, error = require_admin(common)
+        if error:
+            return error
+        ensure_feedback_table()
+        row = common.db.query(UserFeedback).filter(UserFeedback.id == request_body.id).first()
+        if not row:
+            return json_response({
+                "code": str(Code.FEEDBACK_INVALID),
+                "codeMsg": "留言不存在或已被删除",
+            })
+        common.db.delete(row)
+        common.db.commit()
+        return json_response({
+            "code": str(Code.OK),
+            "codeMsg": "已删除",
+            "id": request_body.id,
         })
 
     def list_orders(self, request_body: AdminOrderQuery, common):

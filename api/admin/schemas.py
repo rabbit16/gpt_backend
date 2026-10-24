@@ -47,6 +47,12 @@ class AdminFeedbackUpdate(BaseModel):
     reply: Optional[str] = Field(None, description="管理员公开回复，空字符串表示清空")
 
 
+class AdminFeedbackDelete(BaseModel):
+    """彻底删除一条留言（物理删除，与 is_delete 标记的「隐藏」不同）。"""
+
+    id: int
+
+
 class AdminOrderQuery(BaseModel):
     page: int = Field(1, ge=1)
     page_num: int = Field(10, ge=1, le=50)

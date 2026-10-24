@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends
 
 from api.admin.schemas import (
+    AdminFeedbackDelete,
     AdminFeedbackQuery,
     AdminFeedbackUpdate,
     AdminOrderQuery,
@@ -42,6 +43,12 @@ def admin_feedback(request_body: AdminFeedbackQuery, common: CommonQueryParams =
 @router.post("/admin/feedback/update")
 def admin_feedback_update(request_body: AdminFeedbackUpdate, common: CommonQueryParams = Depends()):
     return admin_service.update_feedback(request_body, common)
+
+
+@router.post("/admin/feedback/delete")
+def admin_feedback_delete(request_body: AdminFeedbackDelete, common: CommonQueryParams = Depends()):
+    """彻底删除留言（物理删除）。「隐藏」走 /admin/feedback/update 的 is_delete。"""
+    return admin_service.delete_feedback(request_body, common)
 
 
 @router.post("/admin/orders")
