@@ -238,7 +238,11 @@ class SoftwareCategory(Base):
 
 
 class Software(Base):
-    """软件下载条目。下载地址是网盘等第三方链接，站点不托管文件。"""
+    """软件下载条目。管理员直传为官方软件，用户投稿需审核通过后才公开。
+
+    source 与 review_status 是两件事：前者是来源身份，后者是审核结论；
+    公开可见 = status=1 且 review_status=approved 且未软删除。
+    """
     __tablename__ = "tb_software"
     id = Column(Integer, primary_key=True, autoincrement=True, index=True)
     category_id = Column(Integer, index=True, nullable=False)
@@ -247,6 +251,19 @@ class Software(Base):
     cover_url = Column(MEDIUMTEXT, default="")
     version = Column(String(50), default="")
     links = Column(JSON, default=list)  # [{label, url, code}]
+    # [{platform, file_url, file_size, version, download_count}]
+    platforms = Column(JSON, default=list)
+    changelog = Column(TEXT, nullable=False, default="")
+    repo_url = Column(String(500), nullable=False, default="")
+    source = Column(String(16), nullable=False, default="official", index=True)  # official / user
+    review_status = Column(String(16), nullable=False, default="approved", index=True)
+    author_user_id = Column(Integer, index=True, nullable=True)
+    author_name = Column(String(100), nullable=False, default="")
+    reviewer_user_id = Column(Integer, nullable=True)
+    reviewer_name = Column(String(100), nullable=False, default="")
+    reviewer_note = Column(String(500), nullable=False, default="")
+    reviewed_at = Column(DateTime, nullable=True)
+    download_count = Column(Integer, nullable=False, default=0)
     status = Column(Integer, default=1, index=True)
     sort = Column(Integer, default=0)
     insert_time = Column(DateTime, default=func.now())

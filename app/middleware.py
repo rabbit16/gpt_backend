@@ -35,9 +35,15 @@ PUBLIC_PATHS = {
     "/apiAI/user/announcement/latest",
     "/apiAI/user/software/category/list",
     "/apiAI/user/software/list",
-    # 软件商城公开列表，游客也要能浏览
+    "/apiAI/user/software/detail",
+    # 软件商城公开列表/详情，游客也要能浏览（详情对未审记录会二次校验作者身份）
     "/apiAI/user/open-source/projects",
 }
+
+# 前缀放行的路径：安装包下载链接是给浏览器直接点的，带不上登录头
+PUBLIC_PATH_PREFIXES = (
+    "/apiAI/user/software/download/",
+)
 
 SKIP_AUTH_PATHS = {
     "file",
@@ -68,7 +74,8 @@ def register_auth_middleware(app: FastAPI):
             SYSTEM_LOG.info(f"接口{request_url.path}, 方法: {request.method}耗时: {time.time() - start_time}")
             return response
 
-        if request_url.path not in PUBLIC_PATHS and request.method.lower() not in ["options", "fetch"]:
+        is_public = request_url.path in PUBLIC_PATHS or request_url.path.startswith(PUBLIC_PATH_PREFIXES)
+        if not is_public and request.method.lower() not in ["options", "fetch"]:
             token = request.headers.get("token")
             if token or request_url.path == "/apiAI/user/verify_pay":
                 user_exists = REDIS_TOOL.exists(f"users:{token}")
